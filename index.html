@@ -6,73 +6,9 @@
   <title>Carottage Neige — PWA</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2b7a78">
 </head>
 <body>
-  <header>
-    <h1>Carottage Neige</h1>
-    <p>Session: saisir 5 sondages — SWE automatique</p>
-  </header>
-
-  <main>
-    <section class="form-section">
-      <div id="sondages">
-        <!-- 5 sondages -->
-        <template id="sondage-tpl">
-          <div class="sondage">
-            <h3>Sondage <span class="index"></span></h3>
-            <label>Poids (g)
-              <input class="poids" type="number" min="0" step="0.01" placeholder="ex: 100">
-            </label>
-            <label>Hauteur neige (mm)
-              <input class="hauteur" type="number" min="0.1" step="0.1" placeholder="ex: 50">
-            </label>
-            <div> SWE : <strong class="sweVal">--</strong></div>
-            <hr>
-          </div>
-        </template>
-      </div>
-
-      <div class="row">
-        <button id="getLocBtn" type="button">Obtenir géolocalisation</button>
-      </div>
-
-      <label>Photo (appareil)
-        <input id="photoInput" type="file" accept="image/*" capture="environment">
-      </label>
-
-      <div class="row">
-        <button id="saveBtn">Enregistrer session (5 sondages)</button>
-        <button id="clearFormBtn" class="secondary">Réinitialiser</button>
-      </div>
-
-      <div id="status" class="status"></div>
-    </section>
-
-    <section class="list-section">
-      <h2>Sessions enregistrées</h2>
-      <div class="row">
-        <button id="exportCsvBtn">Exporter CSV</button>
-        <button id="clearAllBtn" class="danger">Supprimer tout</button>
-      </div>
-      <ul id="list"></ul>
-    </section>
-  </main>
-
-  <template id="list-item-tpl">
-    <li class="item">
-      <div class="meta">
-        <div><strong class="summary"></strong></div>
-        <div class="info"></div>
-      </div>
-      <div class="thumb"></div>
-      <div class="actions">
-        <button class="viewBtn">Voir</button>
-        <button class="delBtn danger">Supprimer</button>
-      </div>
-    </li>
-  </template>
-
-  <script src="app.js"></script>
+  <h1>Carottage Neige</h1>
+  <!-- Simplified placeholder -->
 </body>
 </html>
