@@ -1,6 +1,53 @@
-// Final PWA app.js with Blob storage and ZIP export (loads JSZip dynamically)
+// =====================================================
+// === Liste complète des stations ======================
+// =====================================================
+const stations = [
+  {"lib": "Restefond", "code": "MFR_04096401"},
+  {"lib": "Parpaillon", "code": "MFR_05044400"},
+  {"lib": "La Meije", "code": "MFR_05063402"},
+  {"lib": "Col Agnel", "code": "MFR_05077402"},
+  {"lib": "Galibier", "code": "MFR_05079402"},
+  {"lib": "Refuge Evariste Chancel", "code": "N1720"},
+  {"lib": "Lac de Puy Vachier", "code": "N1721"},
+  {"lib": "Rif du Lac de Puy Vachier", "code": "N1722"},
+  {"lib": "Chalet de l Alpe", "code": "N1723"},
+  {"lib": "Plan de l Alpe", "code": "N1724"},
+  {"lib": "Rif Planche", "code": "N1725"},
+  {"lib": "Sous le col d Arsine", "code": "N1726"},
+  {"lib": "Valfourche", "code": "N1727"},
+  {"lib": "Clot des cavales", "code": "N1728"},
+  {"lib": "Pré Veyraud", "code": "N1731"},
+  {"lib": "Le Chazelet", "code": "N1732"},
+  {"lib": "Lac du Goléon", "code": "N1734"},
+  {"lib": "Refuge", "code": "N1740"},
+  {"lib": "Lac Blanc", "code": "N1741"},
+  {"lib": "La Mine", "code": "N1742"},
+  {"lib": "Chavannus", "code": "N1743"},
+  {"lib": "Punta Niella", "code": "N6110"},
+  {"lib": "Punta Vaccajo", "code": "N6111"},
+  {"lib": "Foce d Astra", "code": "N6112"},
+  {"lib": "Col de Scalella", "code": "N6120"},
+  {"lib": "Moscou", "code": "N9012"},
+  {"lib": "Arolla", "code": "N9015"},
+  {"lib": "Les Bouqueti", "code": "N9020"},
+  {"lib": "Reference Coublevie", "code": "N9022"},
+  {"lib": "Triftji", "code": "N9025"},
+  {"lib": "Reference Grenoble", "code": "N9031"},
+  {"lib": "Mary", "code": "N9000"},
+  {"lib": "Barrada_Bugarret", "code": "N4163"},
+  {"lib": "Spijeoles", "code": "N4218"},
+  {"lib": "La Coquille", "code": "N4544"},
+  {"lib": "Les Dougnes", "code": "N4502"},
+  {"lib": "Arc2000", "code": "N1590"}
+];
+
+// =====================================================================
+// ========== PWA Carottage Neige - JavaScript (session 5 sondages) =====
+// =====================================================================
+
+// IndexDB minimal wrapper
 const DB_NAME = 'carottes-db';
-const DB_VERSION = 2; // bump if schema changes
+const DB_VERSION = 1;
 let db;
 
 function openDB(){
@@ -57,9 +104,7 @@ function clearAll(){
   });
 }
 
-// UI
-const siteInput = document.getElementById('siteOperateur');
-const coefInput = document.getElementById('coefGlobal');
+// UI bindings
 const sondagesWrap = document.getElementById('sondages');
 const sondageTpl = document.getElementById('sondage-tpl');
 const saveBtn = document.getElementById('saveBtn');
@@ -70,115 +115,154 @@ const tpl = document.getElementById('list-item-tpl');
 const getLocBtn = document.getElementById('getLocBtn');
 const photoInput = document.getElementById('photoInput');
 const exportCsvBtn = document.getElementById('exportCsvBtn');
-const exportZipBtn = document.getElementById('exportZipBtn');
 const clearAllBtn = document.getElementById('clearAllBtn');
-const sweMeanEl = document.getElementById('sweMean');
-const mvMeanEl = document.getElementById('mvMean');
+const coefTubeInput = document.getElementById('coefTube');
+
+// ==== NOUVEAU : Sélecteur Site de mesure ====
+const stationSelect = document.getElementById("stationSelect");
+
+// Remplissage de la liste déroulante
+stations.forEach(st => {
+  const opt = document.createElement("option");
+  opt.value = st.code;
+  opt.textContent = st.lib;
+  stationSelect.appendChild(opt);
+});
+
+// ==== NOUVEAU : affichage dynamique du code du site ====
+const stationCodeDisplay = document.createElement('div');
+stationCodeDisplay.id = "stationCodeDisplay";
+stationCodeDisplay.style.marginTop = "6px";
+stationCodeDisplay.style.fontWeight = "italics";
+stationCodeDisplay.textContent = "Code site : —";
+stationSelect.parentNode.insertBefore(stationCodeDisplay, stationSelect.nextSibling);
+
+stationSelect.addEventListener("change", () => {
+  const code = stationSelect.value;
+  stationCodeDisplay.textContent = code ? `Code site : ${code}` : "Code site : —";
+});
 
 let currentCoords = null;
-let currentPhotoBlob = null;
+let currentPhotoDataUrl = null;
 const N = 5; // nombre de sondages
 
-function status(msg){ statusEl.textContent = msg; }
+function getCoefTube() {
+  const v = parseFloat(coefTubeInput.value);
+  return isNaN(v) || v <= 0 ? 0.44 : v;
+}
 
-// initialise sondages UI
+// initialise UI sondages
 function initSondages(){
   sondagesWrap.innerHTML = '';
   for (let i=0;i<N;i++){
     const c = sondageTpl.content.cloneNode(true);
     c.querySelector('.index').textContent = (i+1);
+
     const poids = c.querySelector('.poids');
     const hauteur = c.querySelector('.hauteur');
-    const mvVal = c.querySelector('.mvVal');
-    const sweVal = c.querySelector('.sweVal');
+    const masseValEl = c.querySelector('.masseVolumiqueVal');
+    const sweEl = c.querySelector('.sweVal');
+
     function calc(){
-      const coef = parseFloat(coefInput.value) || 0;
       const p = parseFloat(poids.value);
       const h = parseFloat(hauteur.value);
-      if (isNaN(p) || isNaN(h) || h === 0){ mvVal.textContent = '--'; sweVal.textContent = '--'; updateMeans(); return; }
-      // Masse volumique (kg/m3) = poids * coef / hauteur
-      const mv = (p * coef) / h;
-      // SWE (mm) = Masse volumique * hauteur
-      const swe = mv * h;
-      mvVal.textContent = mv.toFixed(3);
-      sweVal.textContent = swe.toFixed(3);
-      updateMeans();
+      if (isNaN(p) || isNaN(h) || h===0){
+        masseValEl.textContent = '--';
+        sweEl.textContent = '--';
+        return;
+      }
+      const masse = (p * getCoefTube()) / h * 100;
+      masseValEl.textContent = masse.toFixed(0);
+
+      const swe = h * (masse / 100);
+      sweEl.textContent = swe.toFixed(0);
     }
+
     poids.addEventListener('input', calc);
     hauteur.addEventListener('input', calc);
-    coefInput.addEventListener('input', calc);
     sondagesWrap.appendChild(c);
   }
-  updateMeans();
 }
 
-function updateMeans(){
-  const nodes = Array.from(sondagesWrap.querySelectorAll('.sondage'));
-  const mvs = [];
-  const swes = [];
-  for (const n of nodes){
-    const mvText = n.querySelector('.mvVal').textContent;
-    const sweText = n.querySelector('.sweVal').textContent;
-    const mv = mvText === '--' ? NaN : parseFloat(mvText);
-    const swe = sweText === '--' ? NaN : parseFloat(sweText);
-    if (!isNaN(mv)) mvs.push(mv);
-    if (!isNaN(swe)) swes.push(swe);
-  }
-  const avgMv = mvs.length ? (mvs.reduce((a,b)=>a+b,0)/mvs.length) : NaN;
-  const avgSwe = swes.length ? (swes.reduce((a,b)=>a+b,0)/swes.length) : NaN;
-  mvMeanEl.textContent = isNaN(avgMv) ? '--' : avgMv.toFixed(3);
-  sweMeanEl.textContent = isNaN(avgSwe) ? '--' : avgSwe.toFixed(3);
-}
+coefTubeInput.addEventListener('input', ()=>{
+  document.querySelectorAll('.sondage').forEach(s => {
+    const poids = parseFloat(s.querySelector('.poids').value);
+    const hauteur = parseFloat(s.querySelector('.hauteur').value);
+    const masseValEl = s.querySelector('.masseVolumiqueVal');
+    const sweEl = s.querySelector('.sweVal');
 
-# Geoloc and photo handling
+    if (!isNaN(poids) && !isNaN(hauteur) && hauteur>0){
+      const masse = (poids * getCoefTube()) / hauteur * 100;
+      masseValEl.textContent = masse.toFixed(0);
+
+      const swe = hauteur * (masse / 100);
+      sweEl.textContent = swe.toFixed(0);
+    } else {
+      masseValEl.textContent = '--';
+      sweEl.textContent = '--';
+    }
+  });
+});
+
 getLocBtn.addEventListener('click', ()=>{
-    if (!navigator.geolocation) { status('Géolocalisation non supportée'); return; }
-    status('Obtention position...');
-    navigator.geolocation.getCurrentPosition(pos=>{
-      currentCoords = {lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy};
-      status('Position obtenue: ' + currentCoords.lat.toFixed(5) + ', ' + currentCoords.lon.toFixed(5));
-    }, err=>{ status('Erreur géoloc: ' + err.message); }, { enableHighAccuracy: true, timeout: 10000 });
+  if (!navigator.geolocation) { status('Géolocalisation non supportée'); return; }
+  status('Obtention position...');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    currentCoords = {lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy};
+    status('Position obtenue: ' + currentCoords.lat.toFixed(5) + ', ' + currentCoords.lon.toFixed(5));
+  }, err=>{
+    status('Erreur géoloc: ' + err.message);
+  }, { enableHighAccuracy: true, timeout: 10000 });
 });
 
 photoInput.addEventListener('change', async e=>{
   const f = e.target.files && e.target.files[0];
   if (!f) return;
-  try{
-    const bitmap = await createImageBitmap(f);
-    const canvas = document.createElement('canvas');
-    const maxSize = 1024;
-    let { width, height } = bitmap;
-    const ratio = Math.min(maxSize / width, maxSize / height, 1);
-    canvas.width = Math.round(width * ratio);
-    canvas.height = Math.round(height * ratio);
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise(res=>canvas.toBlob(res, 'image/jpeg', 0.75));
-    currentPhotoBlob = blob;
-    status('Photo prête (blob, '+Math.round(blob.size/1024)+' KB)');
-  }catch(e){
-    currentPhotoBlob = f;
-    status('Photo prête (original)');
-  }
+  currentPhotoDataUrl = await compressFileToDataUrl(f);
+  status('Photo prête (compressée)');
 });
 
-# Save, render, export functions
+async function compressFileToDataUrl(file) {
+  const bitmap = await createImageBitmap(file);
+  const canvas = document.createElement('canvas');
+  const maxSize = 1024;
+  let { width, height } = bitmap;
+  const ratio = Math.min(maxSize / width, maxSize / height, 1);
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.75);
+}
+
 saveBtn.addEventListener('click', async ()=>{
-  const site = siteInput.value || '';
+  const selectedStationCode = stationSelect.value;
+  if (!selectedStationCode){
+    status("Sélectionne un site de mesure");
+    return;
+  }
+  const selectedStationLabel = stations.find(s => s.code === selectedStationCode)?.lib;
+
   const nodes = Array.from(sondagesWrap.querySelectorAll('.sondage'));
   const sondages = [];
   for (const n of nodes){
     const p = parseFloat(n.querySelector('.poids').value);
     const h = parseFloat(n.querySelector('.hauteur').value);
-    if (isNaN(p) || isNaN(h) || h === 0){ status('Remplis tous les poids/hauteurs valides'); return; }
-    const coef = parseFloat(coefInput.value) || 0;
-    const mv = (p * coef) / h;
-    const swe = mv * h;
-    sondages.push({poids:p, hauteur:h, mv, swe});
+    if (isNaN(p) || isNaN(h) || h===0){ status('Remplis tous les poids/hauteurs valides'); return; }
+    const masse = (p * getCoefTube()) / h * 100;
+    const swe = h * (masse / 100);
+    sondages.push({poids:p, hauteur:h, masse, swe});
   }
-  const avgMv = sondages.reduce((s,x)=>s+x.mv,0)/sondages.length;
-  const avgSwe = sondages.reduce((s,x)=>s+x.swe,0)/sondages.length;
-  const item = { site, coef: parseFloat(coefInput.value) || 0, sondages, ts: new Date().toISOString(), coords: currentCoords, photoBlob: currentPhotoBlob, avgMv, avgSwe };
+
+  const item = {
+    sondages,
+    ts: new Date().toISOString(),
+    coords: currentCoords,
+    photo: currentPhotoDataUrl,
+    stationCode: selectedStationCode,
+    stationLabel: selectedStationLabel
+  };
+
   try{
     await addSession(item);
     status('Session enregistrée');
@@ -190,14 +274,16 @@ saveBtn.addEventListener('click', async ()=>{
 clearFormBtn.addEventListener('click', resetForm);
 
 function resetForm(){
-  siteInput.value = '';
-  coefInput.value = '0.44';
   initSondages();
   currentCoords = null;
-  currentPhotoBlob = null;
+  currentPhotoDataUrl = null;
   photoInput.value = '';
+  stationSelect.value = "";
+  stationCodeDisplay.textContent = "Code site : —";
   status('Formulaire réinitialisé');
 }
+
+function status(msg){ statusEl.textContent = msg; }
 
 async function renderList(){
   const all = await getAllSessions();
@@ -205,16 +291,30 @@ async function renderList(){
   all.sort((a,b)=> new Date(b.ts) - new Date(a.ts));
   for (const item of all){
     const clone = tpl.content.cloneNode(true);
-    clone.querySelector('.summary').textContent = `${item.sondages.length} sondages • ${item.site || '—'} • ${new Date(item.ts).toLocaleString()}`;
+
+    clone.querySelector('.summary').textContent =
+      `${item.sondages.length} sondages • ${new Date(item.ts).toLocaleString()} • ${item.stationLabel || "Site ?"}`;
+
     const info = clone.querySelector('.info');
-    info.textContent = `SWE moyen: ${item.avgSwe.toFixed(3)} mm • Masse vol. moy.: ${item.avgMv.toFixed(3)} kg/m3` + (item.coords ? ` • ${item.coords.lat.toFixed(4)},${item.coords.lon.toFixed(4)}` : '');
+    const avgSWE = (item.sondages.reduce((s,x)=>s+x.swe,0)/item.sondages.length).toFixed(3);
+    info.textContent =
+      `SWE moyen: ${avgSWE}` +
+      (item.coords ? ` • ${item.coords.lat.toFixed(4)},${item.coords.lon.toFixed(4)}` : '');
+
     const thumb = clone.querySelector('.thumb');
-    if (item.photoBlob){ const img = document.createElement('img'); img.src = URL.createObjectURL(item.photoBlob); thumb.appendChild(img); } else { thumb.textContent = '—'; }
+    if (item.photo){
+      const img = document.createElement('img');
+      img.src = item.photo;
+      thumb.appendChild(img);
+    } else {
+      thumb.textContent = '—';
+    }
 
     const viewBtn = clone.querySelector('.viewBtn');
     viewBtn.addEventListener('click', ()=>{
-      const lines = item.sondages.map((s,i)=>`${i+1}: poids=${s.poids}g hauteur=${s.hauteur}mm mv=${s.mv.toFixed(3)} SWE=${s.swe.toFixed(3)}`);
-      lines.unshift(`Date: ${new Date(item.ts).toLocaleString()} (site=${item.site}, coef=${item.coef})`);
+      const lines = item.sondages.map((s,i)=>`${i+1}: poids=${s.poids}g hauteur=${s.hauteur}mm SWE=${s.swe.toFixed(3)}`);
+      lines.unshift(`Date: ${new Date(item.ts).toLocaleString()}`);
+      lines.unshift(`Site: ${item.stationLabel} (${item.stationCode})`);
       if (item.coords) lines.push(`Coord: ${item.coords.lat.toFixed(5)}, ${item.coords.lon.toFixed(5)} (±${item.coords.acc} m)`);
       alert(lines.join('\n'));
     });
@@ -233,104 +333,65 @@ async function renderList(){
 exportCsvBtn.addEventListener('click', async ()=>{
   const all = await getAllSessions();
   if (!all.length){ status('Aucune donnée'); return; }
-  const headers = ['id','ts','site','coef','lat','lon','photo_included'];
-  for (let i=0;i<N;i++){ headers.push(`s${i+1}_poids_g`,`s${i+1}_hauteur_mm`,`s${i+1}_mv`,`s${i+1}_swe`); }
-  headers.push('avg_mv','avg_swe');
+
+  const headers = ['id','ts','stationCode','stationLabel','lat','lon','photo_included'];
+  for (let i=0;i<N;i++){
+    headers.push(`s${i+1}_poids_g`, `s${i+1}_hauteur_mm`, `s${i+1}_swe`);
+  }
+
   const rows = [headers.join(',')];
+
   for (const r of all){
     const lat = r.coords ? r.coords.lat : '';
     const lon = r.coords ? r.coords.lon : '';
-    const photoFlag = r.photoBlob ? 'yes' : 'no';
-    const base = [r.id, r.ts, JSON.stringify(r.site || ''), r.coef, lat, lon, photoFlag];
+    const photoFlag = r.photo ? 'yes' : 'no';
+
+    const base = [
+      r.id,
+      r.ts,
+      r.stationCode || "",
+      r.stationLabel || "",
+      lat,
+      lon,
+      photoFlag
+    ];
+
     const sond = [];
     for (let i=0;i<N;i++){
-      const s = r.sondages[i] || {poids:'',hauteur:'',mv:'',swe:''};
-      sond.push(s.poids, s.hauteur, s.mv, s.swe);
+      const s = r.sondages[i] || {poids:'',hauteur:'',swe:''};
+      sond.push(s.poids, s.hauteur, s.swe);
     }
-    rows.push(base.concat(sond).concat([r.avgMv, r.avgSwe]).join(','));
+
+    rows.push(base.concat(sond).join(','));
   }
+
   const csv = rows.join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'donnees_carottage.csv';
+  const a = document.createElement('a'); a.href = url; a.download = 'sessions_carottes.csv';
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   status('Export CSV généré');
 });
 
-exportZipBtn.addEventListener('click', async ()=>{
-  if (typeof JSZip === 'undefined') {
-    status('Chargement de la librairie de compression...');
-    try{
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
-    }catch(e){
-      status('Échec chargement JSZip');
-      return;
-    }
-  }
-  const zip = new JSZip();
-  const all = await getAllSessions();
-  if (!all.length){ status('Aucune donnée'); return; }
-  const headers = ['id','ts','site','coef','lat','lon','photo_filename'];
-  for (let i=0;i<N;i++){ headers.push(`s${i+1}_poids_g`,`s${i+1}_hauteur_mm`,`s${i+1}_mv`,`s${i+1}_swe`); }
-  headers.push('avg_mv','avg_swe');
-  const rows = [headers.join(',')];
-  const photosFolder = zip.folder('photos');
-  for (const r of all){
-    const lat = r.coords ? r.coords.lat : '';
-    const lon = r.coords ? r.coords.lon : '';
-    let photoName = '';
-    if (r.photoBlob){
-      photoName = `session-${r.ts.replace(/[:.]/g,'-')}.jpg`;
-      const arr = await blobToArrayBuffer(r.photoBlob);
-      photosFolder.file(photoName, arr);
-    }
-    const base = [r.id || '', r.ts, JSON.stringify(r.site || ''), r.coef, lat, lon, photoName];
-    const sond = [];
-    for (let i=0;i<N;i++){
-      const s = r.sondages[i] || {poids:'',hauteur:'',mv:'',swe:''};
-      sond.push(s.poids, s.hauteur, s.mv, s.swe);
-    }
-    rows.push(base.concat(sond).concat([r.avgMv, r.avgSwe]).join(','));
-  }
-  zip.file('donnees_carottage.csv', rows.join('\n'));
-  status('Création du ZIP...');
-  try{
-    const content = await zip.generateAsync({type:'blob'});
-    const url = URL.createObjectURL(content);
-    const a = document.createElement('a'); a.href = url; a.download = 'export_carottage.zip';
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    status('ZIP généré');
-  }catch(e){ status('Erreur ZIP: '+e.message); }
+clearAllBtn.addEventListener('click', async ()=>{
+  if (!confirm('Supprimer toutes les sessions ?')) return;
+  await clearAll();
+  renderList();
 });
 
-function loadScript(src){
-  return new Promise((res, rej)=>{
-    const s = document.createElement('script');
-    s.src = src;
-    s.onload = ()=>res();
-    s.onerror = (e)=>rej(new Error('load failed'));
-    document.head.appendChild(s);
-  });
-}
-
-function blobToArrayBuffer(blob){
-  return new Promise((res)=>{
-    const r = new FileReader();
-    r.onload = ()=>res(r.result);
-    r.readAsArrayBuffer(blob);
-  });
-}
-
-// Init
+// Initialisation
 (async function(){
-  try{ await openDB();
+  try{
+    await openDB();
     initSondages();
     renderList();
     status('Prêt — offline disponible');
-  }catch(e){ status('Erreur DB: '+e); }
+  }catch(e){
+    status('Erreur DB: '+e);
+  }
 
   if ('serviceWorker' in navigator){
-    try{ await navigator.serviceWorker.register('/service-worker.js'); console.log('SW enregistré'); }
+    try{ await navigator.serviceWorker.register('/service-worker.js'); }
     catch(e){ console.warn('SW failed', e); }
   }
 })();

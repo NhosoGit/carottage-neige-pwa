@@ -11,18 +11,25 @@
 <body>
   <header>
     <h1>Carottage Neige</h1>
-    <p>Session: saisir 5 sondages — SWE & Masse volumique</p>
+    <p>Session: saisir 5 sondages — SWE automatique</p>
   </header>
 
   <main>
     <section class="form-section">
-      <label>Site / Opérateur
-        <input id="siteOperateur" type="text" placeholder="Nom du site ou opérateur">
-      </label>
+      <h3 class="titreSondage">Site de mesure :</h3>
+      <select id="stationSelect" name="station" required>
+          <option value="">-- Sélectionner un site --</option>
+      </select>
+      
+      <div id="stationCodeDisplay" style="margin-top:6px; font-weight:bold;">
+      </div>
 
-      <label>Coef
-        <input id="coefGlobal" type="number" step="0.01" value="0.44">
+      <h3 class="titreSondage">Coef tube de sondage :</h3>
+      <label>
+        <input id="coefTube" type="number" step="0.01" value="0.44" min="0" max="10">
       </label>
+      <hr>
+      <br>
 
       <div id="sondages">
         <!-- 5 sondages -->
@@ -35,8 +42,13 @@
             <label>Hauteur neige (mm)
               <input class="hauteur" type="number" min="0.1" step="0.1" placeholder="ex: 50">
             </label>
-            <div>Masse vol. (kg/m3): <strong class="mvVal">--</strong></div>
-            <div>SWE (mm): <strong class="sweVal">--</strong></div>
+            <div>
+              Masse volumique : <strong class="masseVolumiqueVal">--</strong> kg/m³
+            </div>
+            <div>
+              SWE : <strong class="sweVal">--</strong> mm
+            </div>
+
             <hr>
           </div>
         </template>
@@ -56,19 +68,12 @@
       </div>
 
       <div id="status" class="status"></div>
-
-      <div class="results">
-        <h3>Récapitulatif</h3>
-        <div>SWE moyen (mm): <strong id="sweMean">--</strong></div>
-        <div>Masse vol. moyenne (kg/m3): <strong id="mvMean">--</strong></div>
-      </div>
     </section>
 
     <section class="list-section">
       <h2>Sessions enregistrées</h2>
       <div class="row">
         <button id="exportCsvBtn">Exporter CSV</button>
-        <button id="exportZipBtn">Exporter ZIP (CSV + photos)</button>
         <button id="clearAllBtn" class="danger">Supprimer tout</button>
       </div>
       <ul id="list"></ul>
@@ -89,7 +94,6 @@
     </li>
   </template>
 
-  <!-- JSZip will be loaded dynamically when needed -->
   <script src="app.js"></script>
 </body>
 </html>

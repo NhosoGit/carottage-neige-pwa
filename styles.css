@@ -4,14 +4,13 @@ body{font-family:system-ui,Arial,Helvetica,sans-serif;margin:0;background:var(--
 header{background:var(--accent);color:#fff;padding:16px}
 main{padding:16px;max-width:900px;margin:0 auto}
 label{display:block;margin-bottom:10px}
-input[type=number],input[type=file],input[type=text]{width:100%;padding:8px;border-radius:6px;border:1px solid #ddd}
+input[type=number],input[type=file]{width:100%;padding:8px;border-radius:6px;border:1px solid #ddd}
 button{padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
 button.secondary{background:#6c757d}
 button.danger{background:var(--danger)}
 .form-section{background:var(--card);padding:12px;border-radius:10px;margin-bottom:18px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
 .row{display:flex;gap:10px;align-items:center}
 .status{margin-top:10px;color:#0b4a3a}
-.results{margin-top:12px;padding:8px;background:#f0f7f6;border-radius:8px}
 .list-section{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
 ul#list{list-style:none;padding:0;margin:0}
 .item{display:flex;gap:10px;align-items:center;padding:8px;border-bottom:1px solid #eee}
