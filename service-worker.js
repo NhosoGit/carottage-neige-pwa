@@ -19,7 +19,6 @@ self.addEventListener('activate', evt => {
 });
 
 self.addEventListener('fetch', evt => {
-  // Strategy: cache-first for app shell
   const url = new URL(evt.request.url);
   if (ASSETS.includes(url.pathname) || url.pathname === '/' ) {
     evt.respondWith(
@@ -27,7 +26,6 @@ self.addEventListener('fetch', evt => {
     );
     return;
   }
-  // otherwise try network then cache fallback
   evt.respondWith(
     fetch(evt.request).catch(() => caches.match(evt.request))
   );
