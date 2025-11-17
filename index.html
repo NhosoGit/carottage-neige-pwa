@@ -23,13 +23,17 @@
       
       <div id="stationCodeDisplay" style="margin-top:6px; font-weight:bold;">
       </div>
+      <br>
+
+      <div class="row">
+        <button id="getLocBtn" type="button">Obtenir géolocalisation</button>
+      </div>
 
       <h3 class="titreSondage">Coef tube de sondage :</h3>
       <label>
         <input id="coefTube" type="number" step="0.01" value="0.44" min="0" max="10">
       </label>
       <hr>
-      <br>
 
       <div id="sondages">
         <!-- 5 sondages -->
@@ -37,10 +41,10 @@
           <div class="sondage">
             <h3>Sondage <span class="index"></span></h3>
             <label>Poids (g)
-              <input class="poids" type="number" min="0" step="0.01" placeholder="ex: 100">
+              <input class="poids" type="number" min="0" step="0.01" placeholder="ex: 650">
             </label>
             <label>Hauteur neige (mm)
-              <input class="hauteur" type="number" min="0.1" step="0.1" placeholder="ex: 50">
+              <input class="hauteur" type="number" min="0.1" step="0.1" placeholder="ex: 580">
             </label>
             <div>
               Masse volumique : <strong class="masseVolumiqueVal">--</strong> kg/m³
@@ -53,14 +57,15 @@
           </div>
         </template>
       </div>
+      <br>
+      <br>
 
-      <div class="row">
-        <button id="getLocBtn" type="button">Obtenir géolocalisation</button>
-      </div>
-
-      <label>Photo (appareil)
+      <h3 class="titreSondage">Photo (appareil) :</h3>
+      <label>
         <input id="photoInput" type="file" accept="image/*" capture="environment">
       </label>
+      <hr>
+      <br>
 
       <div class="row">
         <button id="saveBtn">Enregistrer session (5 sondages)</button>

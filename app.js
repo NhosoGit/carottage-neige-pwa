@@ -118,7 +118,7 @@ const exportCsvBtn = document.getElementById('exportCsvBtn');
 const clearAllBtn = document.getElementById('clearAllBtn');
 const coefTubeInput = document.getElementById('coefTube');
 
-// ==== NOUVEAU : Sélecteur Site de mesure ====
+// ==== Sélecteur Site de mesure ====
 const stationSelect = document.getElementById("stationSelect");
 
 // Remplissage de la liste déroulante
@@ -129,7 +129,7 @@ stations.forEach(st => {
   stationSelect.appendChild(opt);
 });
 
-// ==== NOUVEAU : affichage dynamique du code du site ====
+// ==== Affichage dynamique du code du site ====
 const stationCodeDisplay = document.createElement('div');
 stationCodeDisplay.id = "stationCodeDisplay";
 stationCodeDisplay.style.marginTop = "6px";
@@ -171,10 +171,10 @@ function initSondages(){
         sweEl.textContent = '--';
         return;
       }
-      const masse = (p * getCoefTube()) / h * 100;
+      const masse = (p * getCoefTube()) / h * 1000;
       masseValEl.textContent = masse.toFixed(0);
 
-      const swe = h * (masse / 100);
+      const swe = h * masse / 1000;
       sweEl.textContent = swe.toFixed(0);
     }
 
