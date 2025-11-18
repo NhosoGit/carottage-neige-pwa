@@ -1,5 +1,5 @@
 // =====================================================
-// === Liste complète des stations ======================
+// === Liste complÃ¨te des stations ======================
 // =====================================================
 const stations = [
   {"lib": "Restefond", "code": "MFR_04096401"},
@@ -134,12 +134,12 @@ const stationCodeDisplay = document.createElement('div');
 stationCodeDisplay.id = "stationCodeDisplay";
 stationCodeDisplay.style.marginTop = "6px";
 stationCodeDisplay.style.fontWeight = "italics";
-stationCodeDisplay.textContent = "Code site : —";
+stationCodeDisplay.textContent = "Code site : -";
 stationSelect.parentNode.insertBefore(stationCodeDisplay, stationSelect.nextSibling);
 
 stationSelect.addEventListener("change", () => {
   const code = stationSelect.value;
-  stationCodeDisplay.textContent = code ? `Code site : ${code}` : "Code site : —";
+  stationCodeDisplay.textContent = code ? `Code site : ${code}` : "Code site : -";
 });
 
 let currentCoords = null;
@@ -248,10 +248,11 @@ saveBtn.addEventListener('click', async ()=>{
   for (const n of nodes){
     const p = parseFloat(n.querySelector('.poids').value);
     const h = parseFloat(n.querySelector('.hauteur').value);
+    const fondChecked = n.querySelector('.fond').checked ? 'oui' : 'non';
     if (isNaN(p) || isNaN(h) || h===0){ status('Remplis tous les poids/hauteurs valides'); return; }
     const masse = (p * getCoefTube()) / h * 100;
     const swe = h * (masse / 100);
-    sondages.push({poids:p, hauteur:h, masse, swe});
+    sondages.push({poids:p, hauteur:h, masse, swe, fond: fondChecked});
   }
 
   const item = {
@@ -279,7 +280,7 @@ function resetForm(){
   currentPhotoDataUrl = null;
   photoInput.value = '';
   stationSelect.value = "";
-  stationCodeDisplay.textContent = "Code site : —";
+  stationCodeDisplay.textContent = "Code site : -";
   status('Formulaire réinitialisé');
 }
 
@@ -293,13 +294,13 @@ async function renderList(){
     const clone = tpl.content.cloneNode(true);
 
     clone.querySelector('.summary').textContent =
-      `${item.sondages.length} sondages • ${new Date(item.ts).toLocaleString()} • ${item.stationLabel || "Site ?"}`;
+      `${item.sondages.length} sondages à ${new Date(item.ts).toLocaleString()} à ${item.stationLabel || "Site ?"}`;
 
     const info = clone.querySelector('.info');
     const avgSWE = (item.sondages.reduce((s,x)=>s+x.swe,0)/item.sondages.length).toFixed(3);
     info.textContent =
       `SWE moyen: ${avgSWE}` +
-      (item.coords ? ` • ${item.coords.lat.toFixed(4)},${item.coords.lon.toFixed(4)}` : '');
+      (item.coords ? ` à ${item.coords.lat.toFixed(4)},${item.coords.lon.toFixed(4)}` : '');
 
     const thumb = clone.querySelector('.thumb');
     if (item.photo){
@@ -307,7 +308,7 @@ async function renderList(){
       img.src = item.photo;
       thumb.appendChild(img);
     } else {
-      thumb.textContent = '—';
+      thumb.textContent = '-';
     }
 
     const viewBtn = clone.querySelector('.viewBtn');
@@ -315,7 +316,7 @@ async function renderList(){
       const lines = item.sondages.map((s,i)=>`${i+1}: poids=${s.poids}g hauteur=${s.hauteur}mm SWE=${s.swe.toFixed(3)}`);
       lines.unshift(`Date: ${new Date(item.ts).toLocaleString()}`);
       lines.unshift(`Site: ${item.stationLabel} (${item.stationCode})`);
-      if (item.coords) lines.push(`Coord: ${item.coords.lat.toFixed(5)}, ${item.coords.lon.toFixed(5)} (±${item.coords.acc} m)`);
+      if (item.coords) lines.push(`Coord: ${item.coords.lat.toFixed(5)}, ${item.coords.lon.toFixed(5)} (Â±${item.coords.acc} m)`);
       alert(lines.join('\n'));
     });
 
@@ -330,18 +331,26 @@ async function renderList(){
   }
 }
 
-exportCsvBtn.addEventListener('click', async ()=>{
+exportCsvBtn.addEventListener('click', async () => {
   const all = await getAllSessions();
-  if (!all.length){ status('Aucune donnée'); return; }
+  if (!all.length) {
+    status('Aucune donnée');
+    return;
+  }
 
   const headers = ['id','ts','stationCode','stationLabel','lat','lon','photo_included'];
-  for (let i=0;i<N;i++){
-    headers.push(`s${i+1}_poids_g`, `s${i+1}_hauteur_mm`, `s${i+1}_swe`);
+  for (let i = 0; i < N; i++) {
+    headers.push(`s${i+1}_poids_g`, `s${i+1}_hauteur_mm`, `s${i+1}_swe`, `s${i+1}_fond`);
   }
 
   const rows = [headers.join(',')];
 
-  for (const r of all){
+  // Préparer résumé des stations avec compteur
+  const stationCounts = new Map();
+  let firstStationCode = "STATION"; // valeur par défaut si aucune station
+  let firstFound = false;
+
+  for (const r of all) {
     const lat = r.coords ? r.coords.lat : '';
     const lon = r.coords ? r.coords.lon : '';
     const photoFlag = r.photo ? 'yes' : 'no';
@@ -357,20 +366,68 @@ exportCsvBtn.addEventListener('click', async ()=>{
     ];
 
     const sond = [];
-    for (let i=0;i<N;i++){
-      const s = r.sondages[i] || {poids:'',hauteur:'',swe:''};
-      sond.push(s.poids, s.hauteur, s.swe);
+    for (let i = 0; i < N; i++) {
+      const s = r.sondages[i] || { poids:'', hauteur:'', swe:'', fond:'' };
+      sond.push(s.poids, s.hauteur, s.swe, s.fond);
     }
 
     rows.push(base.concat(sond).join(','));
+
+    // Compter sondages par station
+    if (r.stationCode || r.stationLabel) {
+      const key = `${r.stationCode} - ${r.stationLabel}`;
+      stationCounts.set(key, (stationCounts.get(key) || 0) + N);
+      if (!firstFound && r.stationCode) {
+        firstStationCode = r.stationCode;
+        firstFound = true;
+      }
+    }
   }
 
+  // Génération CSV
   const csv = rows.join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
+
+  // Horodatage pour le nom du fichier
+  const now = new Date();
+  const today = now.toLocaleDateString('fr-FR'); // JJ/MM/AAAA
+  const time = now.toLocaleTimeString('fr-FR'); // HH:MM:SS
+  const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0]; // YYYYMMDDTHHMMSS
+  const formattedTimestamp = timestamp.replace('T', '_'); // YYYYMMDD_HHMMSS
+
+  // Nom du fichier CSV
+  const fileName = `Sondage_EDF_${firstStationCode}_${formattedTimestamp}.csv`;
+
+  // Création du Blob
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+  // Création du lien de téléchargement
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'sessions_carottes.csv';
-  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  status('Export CSV généré');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // Libération de l'URL Blob
+  URL.revokeObjectURL(url);
+
+  status(`Export CSV généré : ${fileName}`);
+
+  // Construire corps du mail avec résumé des stations + compte sondages
+  const sessionCount = all.length;
+  const sondageCount = sessionCount * N;
+  let summaryText = '';
+  stationCounts.forEach((count, station) => {
+    summaryText += `${station} : ${count} sondages%0D%0A`;
+  });
+
+  const mailSubject = `Sondages - ${today}`;
+  const mailBody = `Le fichier ${fileName} a été téléchargé dans le dossier de téléchargement du navigateur.%0D%0A%0D%0AMerci de joindre manuellement le fichier csv et les photos ou fichier si nécessaire.%0D%0A%0D%0ADate et heure d'export : ${today} ${time}%0D%0ANombre de sessions : ${sessionCount}%0D%0ANombre total de sondages : ${sondageCount}%0D%0A%0D%0AStations incluses :%0D%0A${summaryText}`;
+
+  // Ouvrir le client mail avec destinataire + résumé
+  const mailtoLink = `mailto:hydro-dtg-climato@edf.fr?subject=${encodeURIComponent(mailSubject)}&body=${mailBody}`;
+  window.location.href = mailtoLink;
 });
 
 clearAllBtn.addEventListener('click', async ()=>{
@@ -385,7 +442,7 @@ clearAllBtn.addEventListener('click', async ()=>{
     await openDB();
     initSondages();
     renderList();
-    status('Prêt — offline disponible');
+    status('Prêt - offline disponible');
   }catch(e){
     status('Erreur DB: '+e);
   }
@@ -395,3 +452,51 @@ clearAllBtn.addEventListener('click', async ()=>{
     catch(e){ console.warn('SW failed', e); }
   }
 })();
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const menuBtn = document.getElementById('menuBtn');
+  const menuList = document.getElementById('menuList');
+
+  menuBtn.addEventListener('click', () => {
+    menuList.classList.toggle('hidden');
+  });
+
+  // Fermer le menu si on clique ailleurs
+  document.addEventListener('click', (e) => {
+    if (!menuBtn.contains(e.target) && !menuList.contains(e.target)) {
+      menuList.classList.add('hidden');
+    }
+  });
+});
+
+// Alerte si MV hors intervalle
+document.addEventListener('input', function (e) {
+  if (e.target.classList.contains('poids') || e.target.classList.contains('hauteur')) {
+    const sondageDiv = e.target.closest('.sondage');
+    const poids = parseFloat(sondageDiv.querySelector('.poids').value) || 0;
+    const hauteur = parseFloat(sondageDiv.querySelector('.hauteur').value) || 0;
+    const coefTube = parseFloat(document.getElementById('coefTube').value) || 0.44;
+
+    if (poids > 0 && hauteur > 0) {
+      // Calcul masse volumique (kg/m³)
+      const masseVolumique = (poids / 1000) / (coefTube * (hauteur / 1000)); // poids en kg, hauteur en m
+      updateMasseVolumique(sondageDiv, masseVolumique);
+    }
+  }
+});
+
+function updateMasseVolumique(sondageDiv, valeur) {
+  const masseElement = sondageDiv.querySelector('.masseVolumiqueVal');
+  const alertElement = sondageDiv.querySelector('.alert-msg');
+
+  masseElement.textContent = valeur.toFixed(2);
+
+  if (valeur < 100 || valeur > 800) {
+    alertElement.textContent = '⚠ Masse volumique peu probable, consulter l aide';
+    alertElement.classList.add('show');
+  } else {
+    alertElement.textContent = '';
+    alertElement.classList.remove('show');
+  }
+}

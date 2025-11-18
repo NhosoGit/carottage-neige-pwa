@@ -1,12 +1,16 @@
-const CACHE_NAME = 'carotte-neige-v1';
+const CACHE_NAME = 'carotte-neige-v3';
 const ASSETS = [
   '/',
   '/index.html',
+  '/aide.html',
+  '/offline.html',    // Ajout de la page offline
   '/styles.css',
   '/app.js',
-  '/manifest.json'
+  '/manifest.json',
+  '/logo.png'
 ];
 
+// INSTALLATION : mise en cache des fichiers essentiels
 self.addEventListener('install', evt => {
   evt.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
@@ -14,21 +18,36 @@ self.addEventListener('install', evt => {
   self.skipWaiting();
 });
 
+// ACTIVATION : suppression des anciens caches
 self.addEventListener('activate', evt => {
-  evt.waitUntil(self.clients.claim());
+  evt.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      );
+    })
+  );
+  self.clients.claim();
 });
 
+// FETCH : stratégie mixte avec fallback offline
 self.addEventListener('fetch', evt => {
-  // Strategy: cache-first for app shell
   const url = new URL(evt.request.url);
-  if (ASSETS.includes(url.pathname) || url.pathname === '/' ) {
+
+  // Cache-first pour l'app shell
+  if (ASSETS.includes(url.pathname) || url.pathname === '/') {
     evt.respondWith(
       caches.match(evt.request).then(cached => cached || fetch(evt.request))
     );
     return;
   }
-  // otherwise try network then cache fallback
+
+  // Network-first avec fallback cache ou offline.html
   evt.respondWith(
-    fetch(evt.request).catch(() => caches.match(evt.request))
+    fetch(evt.request).catch(() => {
+      return caches.match(evt.request).then(cached => {
+        return cached || caches.match('/offline.html');
+      });
+    })
   );
 });

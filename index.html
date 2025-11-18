@@ -9,10 +9,29 @@
   <meta name="theme-color" content="#2b7a78">
 </head>
 <body>
-  <header>
+
+<header>
+  <div class="header-content">
+    <img src="logo.png" alt="Logo Carottage Neige" class="logo">
     <h1>Carottage Neige</h1>
-    <p>Session: saisir 5 sondages — SWE automatique</p>
-  </header>
+    <!-- Menu hamburger -->
+    <nav class="menu">
+      <button id="menuBtn" class="hamburger" aria-label="Menu">&#9776;</button>
+      <ul id="menuList" class="menu-list hidden">
+        <li><a href="https://meteofrance.com/meteo-montagne/alpes-du-nord/risques-avalanche" target="_blank" rel="noopener noreferrer">BRA-ALPN</a></li>
+        <li><a href="https://meteofrance.com/meteo-montagne/alpes-du-nord/risques-avalanche" target="_blank" rel="noopener noreferrer">BRA-ALPS</a></li>
+        <li><a href="https://meteofrance.com/meteo-montagne/pyrenees/risques-avalanche" target="_blank" rel="noopener noreferrer">BRA-PYRENEES</a></li>
+        <li><a href="https://meteofrance.com/meteo-montagne/jura/enneigement" target="_blank" rel="noopener noreferrer">BRA-JURA</a></li>
+        <li><a href="https://meteofrance.com/meteo-montagne/corse/risques-avalanche" target="_blank" rel="noopener noreferrer">BRA-CORSE</a></li>
+        <hr>
+        <li><a href="https://www.data-avalanche.org/synthesis/" target="_blank" rel="noopener noreferrer">DATA-AVALANCHE-SYNTHESIS</a></li>
+        <hr>
+        <li><a href="aide.html">Aide</a></li>
+      </ul>
+    </nav>
+  </div>
+  <p>Session: saisir 5 sondages — SWE automatique</p>
+</header>
 
   <main>
     <section class="form-section">
@@ -40,16 +59,22 @@
         <template id="sondage-tpl">
           <div class="sondage">
             <h3>Sondage <span class="index"></span></h3>
-            <label>Poids (g)
+            <label>Poids net (g (neige uniq.))
               <input class="poids" type="number" min="0" step="0.01" placeholder="ex: 650">
             </label>
             <label>Hauteur neige (mm)
               <input class="hauteur" type="number" min="0.1" step="0.1" placeholder="ex: 580">
             </label>
-            <div>
+
+            <label>Fond (Oui/Non)
+              <input class="fond" type="checkbox">
+            </label>
+
+            <div id="blocMasseSWE">
               Masse volumique : <strong class="masseVolumiqueVal">--</strong> kg/m³
+              <span class="alert-msg"></span>
             </div>
-            <div>
+            <div id="blocMasseSWE">
               SWE : <strong class="sweVal">--</strong> mm
             </div>
 
@@ -60,7 +85,7 @@
       <br>
       <br>
 
-      <h3 class="titreSondage">Photo (appareil) :</h3>
+      <h3 class="titreSondage">Prendre une photo :</h3>
       <label>
         <input id="photoInput" type="file" accept="image/*" capture="environment">
       </label>
@@ -78,7 +103,7 @@
     <section class="list-section">
       <h2>Sessions enregistrées</h2>
       <div class="row">
-        <button id="exportCsvBtn">Exporter CSV</button>
+        <button id="exportCsvBtn">Exporter CSV + mail</button>
         <button id="clearAllBtn" class="danger">Supprimer tout</button>
       </div>
       <ul id="list"></ul>
