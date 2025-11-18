@@ -2,7 +2,7 @@
 // === Liste complète des stations ======================
 // =====================================================
 const stations = [
-  {"lib": "Restefond3", "code": "MFR_04096401"},
+  {"lib": "Restefond", "code": "MFR_04096401"},
   {"lib": "Parpaillon", "code": "MFR_05044400"},
   {"lib": "La Meije", "code": "MFR_05063402"},
   {"lib": "Col Agnel", "code": "MFR_05077402"},
@@ -495,7 +495,7 @@ document.addEventListener('input', function (e) {
 
     if (poids > 0 && hauteur > 0) {
       // Calcul masse volumique (kg/m³)
-      const masseVolumique = (poids / 1000) / (coefTube * (hauteur / 1000)); // poids en kg, hauteur en m
+      const masseVolumique = (poids * getCoefTube()) / hauteur * 1000; // poids en kg, hauteur en m
       updateMasseVolumique(sondageDiv, masseVolumique);
     }
   }
