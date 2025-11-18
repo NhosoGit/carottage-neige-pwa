@@ -344,10 +344,8 @@ exportCsvBtn.addEventListener('click', async () => {
   }
 
   const rows = [headers.join(',')];
-
-  // Préparer résumé des stations avec compteur
   const stationCounts = new Map();
-  let firstStationCode = "STATION"; // valeur par défaut si aucune station
+  let firstStationCode = "STATION";
   let firstFound = false;
 
   for (const r of all) {
@@ -373,7 +371,6 @@ exportCsvBtn.addEventListener('click', async () => {
 
     rows.push(base.concat(sond).join(','));
 
-    // Compter sondages par station
     if (r.stationCode || r.stationLabel) {
       const key = `${r.stationCode} - ${r.stationLabel}`;
       stationCounts.set(key, (stationCounts.get(key) || 0) + N);
@@ -384,37 +381,22 @@ exportCsvBtn.addEventListener('click', async () => {
     }
   }
 
-  // Génération CSV
   const csv = rows.join('\n');
-
-  // Horodatage pour le nom du fichier
   const now = new Date();
-  const today = now.toLocaleDateString('fr-FR'); // JJ/MM/AAAA
-  const time = now.toLocaleTimeString('fr-FR'); // HH:MM:SS
-  const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0]; // YYYYMMDDTHHMMSS
-  const formattedTimestamp = timestamp.replace('T', '_'); // YYYYMMDD_HHMMSS
-
-  // Nom du fichier CSV
+  const today = now.toLocaleDateString('fr-FR');
+  const time = now.toLocaleTimeString('fr-FR');
+  const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0];
+  const formattedTimestamp = timestamp.replace('T', '_');
   const fileName = `Sondage_EDF_${firstStationCode}_${formattedTimestamp}.csv`;
 
-  // Création du Blob
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
 
-  // Création du lien de téléchargement
+  // ✅ Fallback iOS : ouvrir le fichier dans un nouvel onglet
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  window.open(url, '_blank');
+  status(`Fichier généré : ${fileName}. Sur iOS, utilisez "Partager" → "Enregistrer dans Fichiers" puis joignez-le au mail.`);
 
-  // Libération de l'URL Blob
-  URL.revokeObjectURL(url);
-
-  status(`Export CSV généré : ${fileName}`);
-
-  // Construire corps du mail avec résumé des stations + compte sondages
+  // ✅ Mailto amélioré
   const sessionCount = all.length;
   const sondageCount = sessionCount * N;
   let summaryText = '';
@@ -423,12 +405,20 @@ exportCsvBtn.addEventListener('click', async () => {
   });
 
   const mailSubject = `Sondages - ${today}`;
-  const mailBody = `Le fichier ${fileName} a été téléchargé dans le dossier de téléchargement du navigateur.%0D%0A%0D%0AMerci de joindre manuellement le fichier csv et les photos ou fichier si nécessaire.%0D%0A%0D%0ADate et heure d'export : ${today} ${time}%0D%0ANombre de sessions : ${sessionCount}%0D%0ANombre total de sondages : ${sondageCount}%0D%0A%0D%0AStations incluses :%0D%0A${summaryText}`;
+  const mailBody = `Le fichier ${fileName} a été généré mais doit être joint manuellement au mail.%0D%0A%0D%0A` +
+    `Merci de joindre le fichier CSV et les photos si nécessaire.%0D%0A%0D%0A` +
+    `Date et heure d'export : ${today} ${time}%0D%0A` +
+    `Nombre de sessions : ${sessionCount}%0D%0A` +
+    `Nombre total de sondages : ${sondageCount}%0D%0A%0D%0A` +
+    `Stations incluses :%0D%0A${summaryText}`;
 
-  // Ouvrir le client mail avec destinataire + résumé
   const mailtoLink = `mailto:hydro-dtg-climato@edf.fr?subject=${encodeURIComponent(mailSubject)}&body=${mailBody}`;
   window.location.href = mailtoLink;
+
+  // Libération de l'URL Blob
+  URL.revokeObjectURL(url);
 });
+
 
 clearAllBtn.addEventListener('click', async ()=>{
   if (!confirm('Supprimer toutes les sessions ?')) return;
