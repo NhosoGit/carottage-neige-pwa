@@ -338,6 +338,7 @@ exportCsvBtn.addEventListener('click', async () => {
     return;
   }
 
+  // Préparation des en-têtes
   const headers = ['id','ts','stationCode','stationLabel','lat','lon','photo_included'];
   for (let i = 0; i < N; i++) {
     headers.push(`s${i+1}_poids_g`, `s${i+1}_hauteur_mm`, `s${i+1}_swe`, `s${i+1}_fond`);
@@ -348,6 +349,7 @@ exportCsvBtn.addEventListener('click', async () => {
   let firstStationCode = "STATION";
   let firstFound = false;
 
+  // Construction des lignes CSV
   for (const r of all) {
     const lat = r.coords ? r.coords.lat : '';
     const lon = r.coords ? r.coords.lon : '';
@@ -389,10 +391,9 @@ exportCsvBtn.addEventListener('click', async () => {
   const formattedTimestamp = timestamp.replace('T', '_');
   const fileName = `Sondage_EDF_${firstStationCode}_${formattedTimestamp}.csv`;
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const file = new File([csv], fileName, { type: 'text/csv' });
 
-  // ✅ Tentative de partage natif (iOS/Android)
+  // ✅ Tentative de partage natif
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({
@@ -405,11 +406,10 @@ exportCsvBtn.addEventListener('click', async () => {
       status('Partage annulé ou erreur');
     }
   } else {
-    // ✅ Fallback : ouvrir le fichier dans un nouvel onglet
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    // ✅ Fallback : ouvrir via data URI (compatible iOS)
+    const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    window.open(dataUri, '_blank');
     status(`Fichier généré : ${fileName}. Sur iOS, utilisez "Partager" → "Enregistrer dans Fichiers" puis joignez-le au mail.`);
-    URL.revokeObjectURL(url);
   }
 
   // ✅ Mailto amélioré
