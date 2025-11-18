@@ -338,12 +338,17 @@ exportCsvBtn.addEventListener('click', async () => {
     return;
   }
 
-  // Détection plateforme
-  const ua = navigator.userAgent.toLowerCase();
-  const isIOS = /iphone|ipad|ipod/.test(ua);
-  const isAndroid = /android/.test(ua);
+  // Fonction pour échapper les champs CSV
+  const escapeCSV = (value) => {
+    if (value == null) return '';
+    const str = String(value);
+    if (/[",\n]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
 
-  // Préparer en-têtes CSV
+  // Préparer en-têtes
   const headers = ['id','ts','stationCode','stationLabel','lat','lon','photo_included'];
   for (let i = 0; i < N; i++) {
     headers.push(`s${i+1}_poids_g`, `s${i+1}_hauteur_mm`, `s${i+1}_swe`, `s${i+1}_fond`);
@@ -354,28 +359,28 @@ exportCsvBtn.addEventListener('click', async () => {
   let firstStationCode = "STATION";
   let firstFound = false;
 
-  // Construire lignes CSV
   for (const r of all) {
     const lat = r.coords ? r.coords.lat : '';
     const lon = r.coords ? r.coords.lon : '';
     const photoFlag = r.photo ? 'yes' : 'no';
 
-    const base = [r.id, r.ts, r.stationCode || "", r.stationLabel || "", lat, lon, photoFlag];
+    const base = [
+      escapeCSV(r.id),
+      escapeCSV(r.ts),
+      escapeCSV(r.stationCode || ""),
+      escapeCSV(r.stationLabel || ""),
+      escapeCSV(lat),
+      escapeCSV(lon),
+      escapeCSV(photoFlag)
+    ];
+
     const sond = [];
     for (let i = 0; i < N; i++) {
       const s = r.sondages[i] || { poids:'', hauteur:'', swe:'', fond:'' };
-      sond.push(s.poids, s.hauteur, s.swe, s.fond);
+      sond.push(escapeCSV(s.poids), escapeCSV(s.hauteur), escapeCSV(s.swe), escapeCSV(s.fond));
     }
 
-    // Ajouter guillemets si nécessaire
-    const quotedRow = base.concat(sond).map(val => {
-      if (typeof val === 'string' && (val.includes(',') || val.includes('"'))) {
-        return `"${val.replace(/"/g, '""')}"`;
-      }
-      return val;
-    });
-
-    rows.push(quotedRow.join(','));
+    rows.push(base.concat(sond).join(','));
 
     if (r.stationCode || r.stationLabel) {
       const key = `${r.stationCode} - ${r.stationLabel}`;
@@ -387,17 +392,14 @@ exportCsvBtn.addEventListener('click', async () => {
     }
   }
 
-  // Génération CSV avec BOM UTF-8
-  const csvContent = '\uFEFF' + rows.join('\n');
-
-  // Nom du fichier
+  const csvContent = '\uFEFF' + rows.join('\n'); // Ajout BOM UTF-8
   const now = new Date();
   const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0].replace('T', '_');
   const fileName = `Sondage_EDF_${firstStationCode}_${timestamp}.csv`;
 
   try {
-    if (window.showSaveFilePicker && !isIOS) {
-      // ✅ Android Chrome/Edge ou Desktop
+    if (window.showSaveFilePicker) {
+      // ✅ Android Chrome/Edge
       const handle = await window.showSaveFilePicker({
         suggestedName: fileName,
         types: [{ description: 'CSV Files', accept: { 'text/csv': ['.csv'] } }]
@@ -406,7 +408,7 @@ exportCsvBtn.addEventListener('click', async () => {
       await writable.write(csvContent);
       await writable.close();
     } else {
-      // ✅ Fallback iOS Safari ou autres
+      // ✅ Fallback iOS Safari
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
