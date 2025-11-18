@@ -391,27 +391,25 @@ exportCsvBtn.addEventListener('click', async () => {
   const formattedTimestamp = timestamp.replace('T', '_');
   const fileName = `Sondage_EDF_${firstStationCode}_${formattedTimestamp}.csv`;
 
-  // ✅ Détection iOS
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const file = new File([csv], fileName, { type: 'text/csv' });
 
-  if (isIOS) {
-    // ✅ iOS : ouvrir via data URI
+  // ✅ Tentative de partage natif
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        title: 'Export CSV',
+        text: 'Voici le fichier CSV généré.',
+        files: [file]
+      });
+      status('Fichier partagé avec succès');
+    } catch (err) {
+      status('Partage annulé ou erreur');
+    }
+  } else {
+    // ✅ Fallback : ouvrir via data URI (compatible iOS)
     const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
     window.open(dataUri, '_blank');
-    status(`Fichier généré : ${fileName}. Sur iOS, appuyez sur "Partager" → "Enregistrer dans Fichiers", puis joignez-le au mail.`);
-  } else {
-    // ✅ Android/Desktop : forcer le téléchargement avec <a download>
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    status(`Export CSV téléchargé : ${fileName}`);
+    status(`Fichier généré : ${fileName}. Sur iOS, utilisez "Partager" → "Enregistrer dans Fichiers" puis joignez-le au mail.`);
   }
 
   // ✅ Mailto amélioré
