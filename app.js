@@ -338,7 +338,6 @@ exportCsvBtn.addEventListener('click', async () => {
     return;
   }
 
-  // Préparation des en-têtes
   const headers = ['id','ts','stationCode','stationLabel','lat','lon','photo_included'];
   for (let i = 0; i < N; i++) {
     headers.push(`s${i+1}_poids_g`, `s${i+1}_hauteur_mm`, `s${i+1}_swe`, `s${i+1}_fond`);
@@ -349,7 +348,6 @@ exportCsvBtn.addEventListener('click', async () => {
   let firstStationCode = "STATION";
   let firstFound = false;
 
-  // Construction des lignes CSV
   for (const r of all) {
     const lat = r.coords ? r.coords.lat : '';
     const lon = r.coords ? r.coords.lon : '';
@@ -391,17 +389,25 @@ exportCsvBtn.addEventListener('click', async () => {
   const formattedTimestamp = timestamp.replace('T', '_');
   const fileName = `Sondage_EDF_${firstStationCode}_${formattedTimestamp}.csv`;
 
-  // ✅ Détection iOS
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-  // ✅ Fallback : ouvrir via data URI (compatible iOS)
-  const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  window.open(dataUri, '_blank');
-
   if (isIOS) {
+    // ✅ Fallback iOS : ouvrir via data URI
+    const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    window.open(dataUri, '_blank');
     status(`Fichier généré : ${fileName}. Sur iOS, appuyez sur "Partager" → "Enregistrer dans Fichiers", puis joignez-le au mail.`);
   } else {
-    status(`Fichier généré : ${fileName}. Téléchargez-le depuis le nouvel onglet et joignez-le au mail.`);
+    // ✅ Autres navigateurs : téléchargement via Blob
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    status(`Export CSV généré : ${fileName}`);
   }
 
   // ✅ Mailto amélioré
@@ -423,6 +429,7 @@ exportCsvBtn.addEventListener('click', async () => {
   const mailtoLink = `mailto:hydro-dtg-climato@edf.fr?subject=${encodeURIComponent(mailSubject)}&body=${mailBody}`;
   window.location.href = mailtoLink;
 });
+
 
 
 clearAllBtn.addEventListener('click', async ()=>{
