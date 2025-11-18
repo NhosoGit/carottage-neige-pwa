@@ -2,7 +2,7 @@
 // === Liste complète des stations ======================
 // =====================================================
 const stations = [
-  {"lib": "Restefond2", "code": "MFR_04096401"},
+  {"lib": "Restefond", "code": "MFR_04096401"},
   {"lib": "Parpaillon", "code": "MFR_05044400"},
   {"lib": "La Meije", "code": "MFR_05063402"},
   {"lib": "Col Agnel", "code": "MFR_05077402"},
