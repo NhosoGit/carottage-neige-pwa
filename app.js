@@ -394,14 +394,24 @@ exportCsvBtn.addEventListener('click', async () => {
   // ✅ Détection iOS
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-  // ✅ Fallback : ouvrir via data URI (compatible iOS)
-  const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  window.open(dataUri, '_blank');
-
   if (isIOS) {
+    // ✅ iOS : ouvrir via data URI
+    const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    window.open(dataUri, '_blank');
     status(`Fichier généré : ${fileName}. Sur iOS, appuyez sur "Partager" → "Enregistrer dans Fichiers", puis joignez-le au mail.`);
   } else {
-    status(`Fichier généré : ${fileName}. Téléchargez-le depuis le nouvel onglet et joignez-le au mail.`);
+    // ✅ Android/Desktop : forcer le téléchargement avec <a download>
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    status(`Export CSV téléchargé : ${fileName}`);
   }
 
   // ✅ Mailto amélioré
