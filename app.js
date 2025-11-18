@@ -2,7 +2,7 @@
 // === Liste complète des stations ======================
 // =====================================================
 const stations = [
-  {"lib": "Restefond", "code": "MFR_04096401"},
+  {"lib": "Restefond3", "code": "MFR_04096401"},
   {"lib": "Parpaillon", "code": "MFR_05044400"},
   {"lib": "La Meije", "code": "MFR_05063402"},
   {"lib": "Col Agnel", "code": "MFR_05077402"},
@@ -192,10 +192,10 @@ coefTubeInput.addEventListener('input', ()=>{
     const sweEl = s.querySelector('.sweVal');
 
     if (!isNaN(poids) && !isNaN(hauteur) && hauteur>0){
-      const masse = (poids * getCoefTube()) / hauteur * 100;
+      const masse = (poids * getCoefTube()) / hauteur * 1000;
       masseValEl.textContent = masse.toFixed(0);
 
-      const swe = hauteur * (masse / 100);
+      const swe = hauteur * (masse / 1000);
       sweEl.textContent = swe.toFixed(0);
     } else {
       masseValEl.textContent = '--';
@@ -250,8 +250,8 @@ saveBtn.addEventListener('click', async ()=>{
     const h = parseFloat(n.querySelector('.hauteur').value);
     const fondChecked = n.querySelector('.fond').checked ? 'oui' : 'non';
     if (isNaN(p) || isNaN(h) || h===0){ status('Remplis tous les poids/hauteurs valides'); return; }
-    const masse = (p * getCoefTube()) / h * 100;
-    const swe = h * (masse / 100);
+    const masse = (p * getCoefTube()) / h * 1000;
+    const swe = h * (masse / 1000);
     sondages.push({poids:p, hauteur:h, masse, swe, fond: fondChecked});
   }
 
