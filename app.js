@@ -338,6 +338,12 @@ exportCsvBtn.addEventListener('click', async () => {
     return;
   }
 
+  // Détection plateforme
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isAndroid = /android/.test(ua);
+
+  // Préparer en-têtes CSV
   const headers = ['id','ts','stationCode','stationLabel','lat','lon','photo_included'];
   for (let i = 0; i < N; i++) {
     headers.push(`s${i+1}_poids_g`, `s${i+1}_hauteur_mm`, `s${i+1}_swe`, `s${i+1}_fond`);
@@ -348,6 +354,7 @@ exportCsvBtn.addEventListener('click', async () => {
   let firstStationCode = "STATION";
   let firstFound = false;
 
+  // Construire lignes CSV
   for (const r of all) {
     const lat = r.coords ? r.coords.lat : '';
     const lon = r.coords ? r.coords.lon : '';
@@ -359,7 +366,16 @@ exportCsvBtn.addEventListener('click', async () => {
       const s = r.sondages[i] || { poids:'', hauteur:'', swe:'', fond:'' };
       sond.push(s.poids, s.hauteur, s.swe, s.fond);
     }
-    rows.push(base.concat(sond).join(','));
+
+    // Ajouter guillemets si nécessaire
+    const quotedRow = base.concat(sond).map(val => {
+      if (typeof val === 'string' && (val.includes(',') || val.includes('"'))) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    });
+
+    rows.push(quotedRow.join(','));
 
     if (r.stationCode || r.stationLabel) {
       const key = `${r.stationCode} - ${r.stationLabel}`;
@@ -371,24 +387,27 @@ exportCsvBtn.addEventListener('click', async () => {
     }
   }
 
-  const csv = rows.join('\n');
+  // Génération CSV avec BOM UTF-8
+  const csvContent = '\uFEFF' + rows.join('\n');
+
+  // Nom du fichier
   const now = new Date();
   const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0].replace('T', '_');
   const fileName = `Sondage_EDF_${firstStationCode}_${timestamp}.csv`;
 
   try {
-    if (window.showSaveFilePicker) {
-      // ✅ Android Chrome/Edge
+    if (window.showSaveFilePicker && !isIOS) {
+      // ✅ Android Chrome/Edge ou Desktop
       const handle = await window.showSaveFilePicker({
         suggestedName: fileName,
         types: [{ description: 'CSV Files', accept: { 'text/csv': ['.csv'] } }]
       });
       const writable = await handle.createWritable();
-      await writable.write(csv);
+      await writable.write(csvContent);
       await writable.close();
     } else {
-      // ✅ Fallback iOS Safari
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      // ✅ Fallback iOS Safari ou autres
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
