@@ -1,5 +1,5 @@
 // =====================================================
-// === Liste complÃ¨te des stations ======================
+// === Liste complète des stations ======================
 // =====================================================
 const stations = [
   {"lib": "Restefond", "code": "MFR_04096401"},
@@ -391,25 +391,17 @@ exportCsvBtn.addEventListener('click', async () => {
   const formattedTimestamp = timestamp.replace('T', '_');
   const fileName = `Sondage_EDF_${firstStationCode}_${formattedTimestamp}.csv`;
 
-  const file = new File([csv], fileName, { type: 'text/csv' });
+  // ✅ Détection iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-  // ✅ Tentative de partage natif
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({
-        title: 'Export CSV',
-        text: 'Voici le fichier CSV généré.',
-        files: [file]
-      });
-      status('Fichier partagé avec succès');
-    } catch (err) {
-      status('Partage annulé ou erreur');
-    }
+  // ✅ Fallback : ouvrir via data URI (compatible iOS)
+  const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  window.open(dataUri, '_blank');
+
+  if (isIOS) {
+    status(`Fichier généré : ${fileName}. Sur iOS, appuyez sur "Partager" → "Enregistrer dans Fichiers", puis joignez-le au mail.`);
   } else {
-    // ✅ Fallback : ouvrir via data URI (compatible iOS)
-    const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-    window.open(dataUri, '_blank');
-    status(`Fichier généré : ${fileName}. Sur iOS, utilisez "Partager" → "Enregistrer dans Fichiers" puis joignez-le au mail.`);
+    status(`Fichier généré : ${fileName}. Téléchargez-le depuis le nouvel onglet et joignez-le au mail.`);
   }
 
   // ✅ Mailto amélioré
