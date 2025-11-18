@@ -393,6 +393,9 @@ exportCsvBtn.addEventListener('click', async () => {
 
   const file = new File([csv], fileName, { type: 'text/csv' });
 
+  // ✅ Détection iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
   // ✅ Tentative de partage natif
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
@@ -406,10 +409,15 @@ exportCsvBtn.addEventListener('click', async () => {
       status('Partage annulé ou erreur');
     }
   } else {
-    // ✅ Fallback : ouvrir via data URI (compatible iOS)
+    // ✅ Fallback : ouvrir via data URI
     const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
     window.open(dataUri, '_blank');
-    status(`Fichier généré : ${fileName}. Sur iOS, utilisez "Partager" → "Enregistrer dans Fichiers" puis joignez-le au mail.`);
+
+    if (isIOS) {
+      status(`Fichier généré : ${fileName}. Sur iOS, appuyez sur "Partager" → "Enregistrer dans Fichiers", puis joignez-le au mail.`);
+    } else {
+      status(`Fichier généré : ${fileName}. Téléchargez-le depuis le nouvel onglet et joignez-le au mail.`);
+    }
   }
 
   // ✅ Mailto amélioré
