@@ -2,7 +2,7 @@
 // === Liste complète des stations ======================
 // =====================================================
 const stations = [
-  {"lib": "Restefond1", "code": "MFR_04096401"},
+  {"lib": "Restefond2", "code": "MFR_04096401"},
   {"lib": "Parpaillon", "code": "MFR_05044400"},
   {"lib": "La Meije", "code": "MFR_05063402"},
   {"lib": "Col Agnel", "code": "MFR_05077402"},
@@ -338,6 +338,7 @@ exportCsvBtn.addEventListener('click', async () => {
     return;
   }
 
+  // Fonction pour échapper les champs CSV
   const escapeCSV = (value) => {
     if (value == null) return '';
     const str = String(value);
@@ -347,6 +348,7 @@ exportCsvBtn.addEventListener('click', async () => {
     return str;
   };
 
+  // Préparer en-têtes
   const headers = ['id','ts','stationCode','stationLabel','lat','lon','photo_included'];
   for (let i = 0; i < N; i++) {
     headers.push(`s${i+1}_poids_g`, `s${i+1}_hauteur_mm`, `s${i+1}_swe`, `s${i+1}_fond`);
@@ -390,7 +392,7 @@ exportCsvBtn.addEventListener('click', async () => {
     }
   }
 
-  const csvContent = '\uFEFF' + rows.join('\n');
+  const csvContent = '\uFEFF' + rows.join('\n'); // BOM UTF-8
   const now = new Date();
   const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0].replace('T', '_');
   const fileName = `Sondage_EDF_${firstStationCode}_${timestamp}.csv`;
@@ -398,26 +400,18 @@ exportCsvBtn.addEventListener('click', async () => {
   const file = new File([blob], fileName, { type: 'text/csv' });
 
   try {
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      // ✅ Partage natif (Android Chrome, iOS Safari)
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+    if (isSafari && navigator.canShare && navigator.canShare({ files: [file] })) {
+      // ✅ Safari iOS → menu natif de partage
       await navigator.share({
         title: 'Export Sondages EDF',
         text: 'Voici le fichier CSV des sondages.',
         files: [file]
       });
       status('Fichier partagé avec succès');
-    } else if (window.showSaveFilePicker) {
-      // ✅ Choix emplacement (Android Chrome/Edge)
-      const handle = await window.showSaveFilePicker({
-        suggestedName: fileName,
-        types: [{ description: 'CSV Files', accept: { 'text/csv': ['.csv'] } }]
-      });
-      const writable = await handle.createWritable();
-      await writable.write(csvContent);
-      await writable.close();
-      status('Fichier sauvegardé');
     } else {
-      // ✅ Fallback iOS Safari
+      // ✅ Autres navigateurs → téléchargement automatique
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -429,8 +423,8 @@ exportCsvBtn.addEventListener('click', async () => {
       status('Fichier téléchargé');
     }
   } catch (err) {
-    console.error('Erreur lors du partage/sauvegarde :', err);
-    status('Erreur lors du partage/sauvegarde');
+    console.error('Erreur lors du partage/téléchargement :', err);
+    status('Erreur lors du partage/téléchargement');
     return;
   }
 
