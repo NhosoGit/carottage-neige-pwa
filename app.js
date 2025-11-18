@@ -390,11 +390,27 @@ exportCsvBtn.addEventListener('click', async () => {
   const fileName = `Sondage_EDF_${firstStationCode}_${formattedTimestamp}.csv`;
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const file = new File([csv], fileName, { type: 'text/csv' });
 
-  // ✅ Fallback iOS : ouvrir le fichier dans un nouvel onglet
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-  status(`Fichier généré : ${fileName}. Sur iOS, utilisez "Partager" → "Enregistrer dans Fichiers" puis joignez-le au mail.`);
+  // ✅ Tentative de partage natif (iOS/Android)
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        title: 'Export CSV',
+        text: 'Voici le fichier CSV généré.',
+        files: [file]
+      });
+      status('Fichier partagé avec succès');
+    } catch (err) {
+      status('Partage annulé ou erreur');
+    }
+  } else {
+    // ✅ Fallback : ouvrir le fichier dans un nouvel onglet
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    status(`Fichier généré : ${fileName}. Sur iOS, utilisez "Partager" → "Enregistrer dans Fichiers" puis joignez-le au mail.`);
+    URL.revokeObjectURL(url);
+  }
 
   // ✅ Mailto amélioré
   const sessionCount = all.length;
@@ -414,9 +430,6 @@ exportCsvBtn.addEventListener('click', async () => {
 
   const mailtoLink = `mailto:hydro-dtg-climato@edf.fr?subject=${encodeURIComponent(mailSubject)}&body=${mailBody}`;
   window.location.href = mailtoLink;
-
-  // Libération de l'URL Blob
-  URL.revokeObjectURL(url);
 });
 
 
