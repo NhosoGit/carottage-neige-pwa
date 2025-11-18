@@ -2,7 +2,7 @@
 // === Liste complète des stations ======================
 // =====================================================
 const stations = [
-  {"lib": "Restefond", "code": "MFR_04096401"},
+  {"lib": "Restefond1", "code": "MFR_04096401"},
   {"lib": "Parpaillon", "code": "MFR_05044400"},
   {"lib": "La Meije", "code": "MFR_05063402"},
   {"lib": "Col Agnel", "code": "MFR_05077402"},
@@ -338,7 +338,6 @@ exportCsvBtn.addEventListener('click', async () => {
     return;
   }
 
-  // Fonction pour échapper les champs CSV
   const escapeCSV = (value) => {
     if (value == null) return '';
     const str = String(value);
@@ -348,7 +347,6 @@ exportCsvBtn.addEventListener('click', async () => {
     return str;
   };
 
-  // Préparer en-têtes
   const headers = ['id','ts','stationCode','stationLabel','lat','lon','photo_included'];
   for (let i = 0; i < N; i++) {
     headers.push(`s${i+1}_poids_g`, `s${i+1}_hauteur_mm`, `s${i+1}_swe`, `s${i+1}_fond`);
@@ -392,14 +390,24 @@ exportCsvBtn.addEventListener('click', async () => {
     }
   }
 
-  const csvContent = '\uFEFF' + rows.join('\n'); // Ajout BOM UTF-8
+  const csvContent = '\uFEFF' + rows.join('\n');
   const now = new Date();
   const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0].replace('T', '_');
   const fileName = `Sondage_EDF_${firstStationCode}_${timestamp}.csv`;
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const file = new File([blob], fileName, { type: 'text/csv' });
 
   try {
-    if (window.showSaveFilePicker) {
-      // ✅ Android Chrome/Edge
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      // ✅ Partage natif (Android Chrome, iOS Safari)
+      await navigator.share({
+        title: 'Export Sondages EDF',
+        text: 'Voici le fichier CSV des sondages.',
+        files: [file]
+      });
+      status('Fichier partagé avec succès');
+    } else if (window.showSaveFilePicker) {
+      // ✅ Choix emplacement (Android Chrome/Edge)
       const handle = await window.showSaveFilePicker({
         suggestedName: fileName,
         types: [{ description: 'CSV Files', accept: { 'text/csv': ['.csv'] } }]
@@ -407,9 +415,9 @@ exportCsvBtn.addEventListener('click', async () => {
       const writable = await handle.createWritable();
       await writable.write(csvContent);
       await writable.close();
+      status('Fichier sauvegardé');
     } else {
       // ✅ Fallback iOS Safari
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -418,10 +426,11 @@ exportCsvBtn.addEventListener('click', async () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      status('Fichier téléchargé');
     }
   } catch (err) {
-    console.error('Erreur lors de la sauvegarde :', err);
-    status('Erreur lors de la sauvegarde');
+    console.error('Erreur lors du partage/sauvegarde :', err);
+    status('Erreur lors du partage/sauvegarde');
     return;
   }
 
@@ -436,7 +445,7 @@ exportCsvBtn.addEventListener('click', async () => {
   });
 
   const mailSubject = `Sondages - ${today}`;
-  const mailBody = `Le fichier ${fileName} a été sauvegardé.%0D%0A%0D%0AMerci de joindre manuellement le fichier csv et les photos si nécessaire.%0D%0A%0D%0ADate et heure d'export : ${today} ${time}%0D%0ANombre de sessions : ${sessionCount}%0D%0ANombre total de sondages : ${sondageCount}%0D%0A%0D%0AStations incluses :%0D%0A${summaryText}`;
+  const mailBody = `Le fichier ${fileName} a été généré.%0D%0A%0D%0AMerci de joindre manuellement le fichier csv et les photos si nécessaire.%0D%0A%0D%0ADate et heure d'export : ${today} ${time}%0D%0ANombre de sessions : ${sessionCount}%0D%0ANombre total de sondages : ${sondageCount}%0D%0A%0D%0AStations incluses :%0D%0A${summaryText}`;
   const mailtoLink = `mailto:hydro-dtg-climato@edf.fr?subject=${encodeURIComponent(mailSubject)}&body=${mailBody}`;
   window.location.href = mailtoLink;
 });
