@@ -1,50 +1,42 @@
-const CACHE_NAME = 'app-cache-v3';
+const CACHE_NAME = "app-cache-v4";
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/aide.html',
-  '/MV.png',
-  '/styles.css',
-  '/app.js',
-  '/manifest.json',
-  '/offline.html'
+  "/",
+  "/index.html",
+  "/aide.html",
+  "/MV.png",
+  "/styles.css",
+  "/app.js",
+  "/manifest.json",
 ];
 
-self.addEventListener('install', event => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
 });
 
-self.addEventListener('activate', event => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      )
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     )
   );
 });
 
-// ?? Fix OFFICIEL Android : navigation fallback ? index.html
-self.addEventListener('fetch', event => {
-  // Navigation (chargement de page)
-  if (event.request.mode === 'navigate') {
+// ?? Le correctif indispensables Android
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+
+  // Navigation = renvoyer TOUJOURS index.html
+  if (req.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/index.html'))
+      fetch(req).catch(() => caches.match("/index.html"))
     );
     return;
   }
 
-  // Autres requêtes (JS, CSS, images…)
+  // Ressources statiques
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request).catch(() => {
-        // Fallback d'urgence si vraiment introuvable
-        if (event.request.destination === 'document') {
-          return caches.match('/offline.html');
-        }
-      });
-    })
+    caches.match(req).then((res) => res || fetch(req))
   );
 });
