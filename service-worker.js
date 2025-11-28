@@ -1,5 +1,4 @@
-
-const CACHE_NAME = 'app-cache-v2';
+const CACHE_NAME = 'app-cache-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -11,34 +10,41 @@ const ASSETS = [
   '/offline.html'
 ];
 
-// Installation : mise en cache des fichiers essentiels
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS);
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
   );
 });
 
-// Activation : suppression des anciens caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
+    caches.keys().then(keys =>
+      Promise.all(
         keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      );
-    })
+      )
+    )
   );
 });
 
-// Fetch : stratégie offline améliorée
+// ?? Fix OFFICIEL Android : navigation fallback ? index.html
 self.addEventListener('fetch', event => {
+  // Navigation (chargement de page)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Autres requêtes (JS, CSS, images…)
   event.respondWith(
     caches.match(event.request).then(response => {
-      if (response) {
-        return response; // Cache-first pour les ressources connues
-      }
-      return fetch(event.request).catch(() => caches.match('/offline.html'));
+      return response || fetch(event.request).catch(() => {
+        // Fallback d'urgence si vraiment introuvable
+        if (event.request.destination === 'document') {
+          return caches.match('/offline.html');
+        }
+      });
     })
   );
 });
