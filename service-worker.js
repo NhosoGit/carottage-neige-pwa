@@ -3,6 +3,8 @@ const CACHE_NAME = 'app-cache-v2';
 const ASSETS = [
   '/',
   '/index.html',
+  '/aide.html',
+  '/MV.png',
   '/styles.css',
   '/app.js',
   '/manifest.json',
